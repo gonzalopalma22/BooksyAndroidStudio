@@ -1,5 +1,6 @@
 package com.example.booksy.ui
 
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
@@ -60,7 +61,7 @@ fun RegisterScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Start
         ) {
-            IconButton(onClick = { onBackToLogin() }) { // ⬅️ Al hacer click, llamamos a la función
+            IconButton(onClick = { onBackToLogin() }) {
                 Icon(
                     imageVector = Icons.Default.ArrowBack,
                     contentDescription = "Volver al Login",
@@ -77,6 +78,8 @@ fun RegisterScreen(
             value = nombre, onValueChange = { nombre = it },
             label = { Text("Nombre completo") }, modifier = Modifier.fillMaxWidth(), singleLine = true
         )
+        // ➡️ HINT 1: Nombre
+        Text("Requerido", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
@@ -84,6 +87,8 @@ fun RegisterScreen(
             label = { Text("Correo electrónico") }, modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), singleLine = true
         )
+
+        Text("Formato válido (ejemplo@dominio.com)", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
@@ -91,6 +96,8 @@ fun RegisterScreen(
             label = { Text("Teléfono") }, modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), singleLine = true
         )
+
+        Text("Opcional (se recomienda formato internacional)", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
@@ -105,6 +112,7 @@ fun RegisterScreen(
             },
             singleLine = true
         )
+
         Text("Mínimo 6 caracteres", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -117,7 +125,6 @@ fun RegisterScreen(
         if (confirmPassword.isNotEmpty() && password != confirmPassword) {
             Text("Las contraseñas no coinciden", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
         }
-
         Spacer(modifier = Modifier.height(32.dp))
 
 
@@ -137,7 +144,19 @@ fun RegisterScreen(
                                 Toast.makeText(context, "¡Registro exitoso!", Toast.LENGTH_LONG).show()
                                 onRegisterSuccess()
                             } else {
-                                Toast.makeText(context, "Error: Datos inválidos", Toast.LENGTH_SHORT).show()
+
+                                val errorCode = response.code()
+
+                                val errorBody = response.errorBody()?.string() ?: "No body available."
+
+
+                                Log.e("REGISTRO_ERROR", "Código: $errorCode, Cuerpo: $errorBody")
+
+                                Toast.makeText(
+                                    context,
+                                    "Error $errorCode. Revisar Logcat (REGISTRO_ERROR).",
+                                    Toast.LENGTH_LONG
+                                ).show()
                             }
                         } catch (e: Exception) {
                             Toast.makeText(context, "Error de red: ${e.message}", Toast.LENGTH_SHORT).show()

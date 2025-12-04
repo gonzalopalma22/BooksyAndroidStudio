@@ -1,6 +1,5 @@
 package com.example.booksy
 
-import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -10,34 +9,36 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import com.example.booksy.network.RetrofitClient
 import com.example.booksy.ui.HomeScreen
 import com.example.booksy.ui.LoginScreen
 import com.example.booksy.ui.ProfileScreen
 import com.example.booksy.ui.RegisterScreen
 import com.example.booksy.ui.theme.BooksyTheme
+import android.content.Context
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
 
-        val sessionData = loadSession(this)
-        val savedToken = sessionData.first
-        val savedName = sessionData.second
+        RetrofitClient.initialize(this)
 
 
-        val startScreen = if (!savedToken.isNullOrEmpty()) "home" else "login"
+        val loadedToken = RetrofitClient.fetchToken()
+        val savedName = loadUserName(this)
+
+        val startScreen = if (!loadedToken.isNullOrEmpty()) "home" else "login"
 
         setContent {
             BooksyTheme {
 
                 var currentScreen by remember { mutableStateOf(startScreen) }
 
-
-                var userToken by remember { mutableStateOf(savedToken ?: "") }
-                var userName by remember { mutableStateOf(savedName ?: "") }
-
-
+                // Usamos los datos cargados al inicio
+                var userToken by remember { mutableStateOf(loadedToken ?: "") }
+                var userName by remember { mutableStateOf(savedName ?: "Invitado") }
                 var userPhotoUri by remember { mutableStateOf(loadPhotoUri(this)) }
 
                 Surface(
@@ -47,14 +48,17 @@ class MainActivity : ComponentActivity() {
                     when (currentScreen) {
                         "login" -> {
                             LoginScreen(
+
                                 onLoginSuccess = { token, name ->
 
-                                    saveSession(this@MainActivity, token, name)
+                                    RetrofitClient.saveToken(token)
+                                    saveUserName(this@MainActivity, name) //
 
                                     userToken = token
                                     userName = name
                                     currentScreen = "home"
                                 },
+
                                 onGoToRegister = { currentScreen = "register" }
                             )
                         }
@@ -63,9 +67,9 @@ class MainActivity : ComponentActivity() {
                                 onRegisterSuccess = {
                                     currentScreen = "login"
                                 },
-                                // 👇 ESTO ES LO IMPORTANTE:
+
                                 onBackToLogin = {
-                                    currentScreen = "login" // Esto cambia la pantalla
+                                    currentScreen = "login"
                                 }
                             )
                         }
@@ -77,11 +81,14 @@ class MainActivity : ComponentActivity() {
                                 userPhotoUri = userPhotoUri,
                                 onLogout = {
 
-                                    clearSession(this@MainActivity)
+
+                                    RetrofitClient.clearSession()
+                                    clearUserName(this@MainActivity)
 
                                     userToken = ""
                                     currentScreen = "login"
                                 },
+
                                 onNavigateToProfile = { currentScreen = "profile" }
                             )
                         }
@@ -101,32 +108,30 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-    private fun saveSession(context: Context, token: String, name: String) {
+
+
+    private fun saveUserName(context: Context, name: String) {
         val sharedPref = context.getSharedPreferences("BooksyPrefs", Context.MODE_PRIVATE)
         with(sharedPref.edit()) {
-            putString("auth_token", token)
             putString("auth_name", name)
-            apply() // Guardar cambios
+            apply()
         }
     }
 
-    private fun loadSession(context: Context): Pair<String?, String?> {
+    private fun loadUserName(context: Context): String? {
         val sharedPref = context.getSharedPreferences("BooksyPrefs", Context.MODE_PRIVATE)
-        val token = sharedPref.getString("auth_token", null)
-        val name = sharedPref.getString("auth_name", null)
-        return Pair(token, name)
+        return sharedPref.getString("auth_name", null)
     }
 
-    private fun clearSession(context: Context) {
+    private fun clearUserName(context: Context) {
         val sharedPref = context.getSharedPreferences("BooksyPrefs", Context.MODE_PRIVATE)
         with(sharedPref.edit()) {
-            remove("auth_token")
             remove("auth_name")
             apply()
         }
     }
 
-    // B. FOTO DE PERFIL
+
     private fun savePhotoUri(context: Context, uri: Uri) {
         val sharedPref = context.getSharedPreferences("BooksyPrefs", Context.MODE_PRIVATE)
         with(sharedPref.edit()) {

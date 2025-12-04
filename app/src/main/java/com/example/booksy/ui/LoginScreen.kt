@@ -30,7 +30,7 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
 
-    // Estado para pintar de rojo los campos si hay error
+
     var isError by remember { mutableStateOf(false) }
 
     Column(
@@ -50,18 +50,18 @@ fun LoginScreen(
             value = email,
             onValueChange = {
                 email = it
-                isError = false // Si escribe, quitamos el error rojo
+                isError = false
             },
             label = { Text("Correo electrónico") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            isError = isError, // Se pone rojo si falla
+            isError = isError,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email) // Teclado con @
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // CAMPO CONTRASEÑA
+
         OutlinedTextField(
             value = password,
             onValueChange = {
@@ -76,7 +76,7 @@ fun LoginScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
         )
 
-        // Mensaje de error visible en texto rojo
+
         if (isError) {
             Text(
                 text = "Correo o contraseña incorrectos",
@@ -97,7 +97,7 @@ fun LoginScreen(
                 } else {
                     scope.launch {
                         isLoading = true
-                        isError = false // Reseteamos error antes de intentar
+                        isError = false
                         try {
                             val request = LoginRequest(email, password)
                             val response = apiService.login(request)
@@ -105,15 +105,15 @@ fun LoginScreen(
                             if (response.isSuccessful && response.body() != null) {
                                 val loginResponse = response.body()!!
 
-                                // ÉXITO
+
                                 onLoginSuccess(
                                     loginResponse.data.access_token,
                                     loginResponse.data.user.nombre ?: "Usuario"
                                 )
                             } else {
-                                // ERROR (401, 400, etc)
+
                                 isError = true
-                                // Intentamos leer el mensaje de error del backend, si no usamos uno genérico
+
                                 Toast.makeText(context, "Credenciales incorrectas", Toast.LENGTH_SHORT).show()
                             }
                         } catch (e: Exception) {

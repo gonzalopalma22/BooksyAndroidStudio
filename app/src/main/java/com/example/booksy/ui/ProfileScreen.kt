@@ -46,7 +46,7 @@ fun ProfileScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
-            onImageSaved(uri) // Guardamos en MainActivity
+            onImageSaved(uri)
         }
     }
 
@@ -55,7 +55,7 @@ fun ProfileScreen(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
         if (success && tempCameraUri != null) {
-            onImageSaved(tempCameraUri!!) // Guardamos en MainActivity
+            onImageSaved(tempCameraUri!!)
         }
     }
 
@@ -99,7 +99,7 @@ fun ProfileScreen(
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
-                // 📸 USAMOS LA VARIABLE QUE VIENE DE MAINACTIVITY
+
                 if (currentImageUri != null) {
                     AsyncImage(
                         model = currentImageUri,
