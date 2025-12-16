@@ -1,0 +1,116 @@
+#Booksy SPA
+
+**Booksy es una librería digital multiplataforma cuyo objetivo es impulsar la lectura digital haciendo que los libros sean accesibles para todos.La aplicación ofrece un catálogo curado de libros electrónicos (eBooks) de alta calidad, promoviendo activamente a autores nacionales e internacionales, y manteniendo un modelo de precios justos y accesibles para el lector. Booksy busca democratizar el acceso a la cultura, facilitando la transición y el disfrute de la lectura en dispositivos móviles.**
+
+---
+
+## Integrantes del Equipo
+
+
+| Rol | Nombre Completo | Usuario GitHub |
+| Desarrollador|Rodrigo Salazar  | user: rodrygo-coder(https://github.com/rodrygo-coder) |
+| Desarrollador/a | Gonzalo Palma |user: gonzalopalma22(https://github.com/gonzalopalma22) |
+
+
+---
+
+## Funcionalidades
+
+Aquí se detallan las principales características y lo que la aplicación permite hacer.
+
+* **Administración de libros (añadir, editar, eliminar)**: [Descripción de cómo funciona o qué resuelve].
+* **[Funcionalidad 2]**: [Descripción de cómo funciona o qué resuelve].
+* **[Funcionalidad 3]**: [Descripción de cómo funciona o qué resuelve].
+* ...y cualquier otra funcionalidad clave.
+
+---
+
+##  Endpoints y APIs
+
+Esta sección lista las rutas de la API, distinguiendo entre los servicios propios (microservicios) y los servicios externos consumidos.
+
+###  Endpoints Propios (Microservicios)
+
+La aplicación consume una API REST desplegada en Render. Los endpoints disponibles son:
+| Método | Ruta (Path) | Descripción |
+| :--- | :--- | :--- |
+| `POST` | `/api/auth/login` | Autentica un usuario con email y contraseña. Retorna token de acceso. |
+| `POST` | `/api/auth/register` | Registra un nuevo usuario en el sistema. |
+| `GET` | `/api/libro` | Obtiene la lista completa de libros disponibles (requiere autenticación). |
+
+
+** URL Base del Backend:** `https://booksydesarrollo.onrender.com/api/`
+
+
+**Código fuente del backend:** El backend está desplegado en Render (no incluido en este repositorio).
+** Autenticación:**
+- Tipo: Bearer Token (JWT)
+- Header: `Authorization: Bearer {token}`
+- El token se obtiene tras login exitoso y se almacena localmente usando `SharedPreferences
+
+###  APIs Externas Consumidas
+
+ **Coil Image Loading** | Carga y caché de imágenes de portadas de libros desde URLs | [Coil-kt](https://coil-kt.github.io/coil/) |
+ **Retrofit + OkHttp** | Cliente HTTP para consumir la API REST del backend | [Square](https://square.github.io/retrofit/) |
+|**Gson Converter** | Serialización/deserialización de JSON para las respuestas de la API | [Google Gson](https://github.com/google/gson) |
+
+---
+
+## Instrucciones de Ejecución
+
+Instrucciones claras y paso a paso para que cualquier persona pueda configurar y ejecutar el proyecto (app móvil y microservicios).
+
+### 1. Prerrequisitos para la ejecución del proyecto 
+
+*Android Studio (versión Hedgehog 2023.1.1 o superior recomendada)
+*JDK 17 o compatible
+*Gradle (incluido en el proyecto)
+*Emulador Android o dispositivo físico con Android 5.0 (API 21) o superior
+
+
+
+### 2. Configuración del Entorno para ejecución 
+bash
+git clone https://github.com/gonzalopalma22/BooksyAndroidStudio.git 
+cd BooksyAndroidStudio
+
+##  Artefactos de la App (APK y Firmado)
+
+Esta sección aborda los puntos de `APK firmado` y `ubicación del archivo .jks`.
+
+### Archivo APK
+
+**hubieron problemas con la firma de la apk
+
+
+---
+
+## Evidencia de Trabajo Colaborativo
+
+
+
+### Gráfico de Contribuciones
+
+Puedes ver las contribuciones de cada miembro del equipo directamente en GitHub en graficos:
+
+https://github.com/gonzalopalma22/BooksyAndroidStudio/graphs/contributors**
+
+[Contribuciones](https://github.com/gonzalopalma22/BooksyAndroidStudio/graphs/contributors?chart=commits)
+
+
+---
+## Estructura del Repositorio
+
+Booksyfinal/
+└── app/
+├── src/
+│ ├── main/
+│ │ ├── java/com/example/booksyfinal/
+│ │ ├── res/
+│ │ └── AndroidManifest.xml
+│ ├── test/
+│ └── androidTest/
+├── build.gradle.kts
+└── proguard-rules.pro
+
+
