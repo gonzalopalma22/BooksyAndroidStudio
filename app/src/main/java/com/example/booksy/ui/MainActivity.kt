@@ -1,7 +1,7 @@
 package com.example.booksy
 
-import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,25 +9,22 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import com.example.booksy.data.local.SessionManager
+import com.example.booksy.model.Libro
 import com.example.booksy.network.RetrofitClient
-import com.example.booksy.ui.HomeScreen
-import com.example.booksy.ui.LoginScreen
-import com.example.booksy.ui.ProfileScreen
-import com.example.booksy.ui.RegisterScreen
+import com.example.booksy.ui.*
 import com.example.booksy.ui.theme.BooksyTheme
-import android.content.Context
 
 class MainActivity : ComponentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
 
         RetrofitClient.initialize(this)
+        val sessionManager = SessionManager(this)
+        val loadedToken = sessionManager.fetchAuthToken()
 
-
-        val loadedToken = RetrofitClient.fetchToken()
-        val savedName = loadUserName(this)
 
         val startScreen = if (!loadedToken.isNullOrEmpty()) "home" else "login"
 
@@ -35,114 +32,96 @@ class MainActivity : ComponentActivity() {
             BooksyTheme {
 
                 var currentScreen by remember { mutableStateOf(startScreen) }
+                var userName by remember { mutableStateOf(sessionManager.fetchUserName() ?: "Usuario") }
+                var userPhotoUri by remember { mutableStateOf(sessionManager.fetchPhotoUri()) }
 
-                // Usamos los datos cargados al inicio
-                var userToken by remember { mutableStateOf(loadedToken ?: "") }
-                var userName by remember { mutableStateOf(savedName ?: "Invitado") }
-                var userPhotoUri by remember { mutableStateOf(loadPhotoUri(this)) }
 
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
+                var selectedBook by remember { mutableStateOf<Libro?>(null) }
+                val cartItems = remember { mutableStateListOf<Libro>() }
+                val libraryBooks = remember { mutableStateListOf<Libro>() }
+
+                val context = LocalContext.current
+
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     when (currentScreen) {
-                        "login" -> {
-                            LoginScreen(
-
-                                onLoginSuccess = { token, name ->
-
-                                    RetrofitClient.saveToken(token)
-                                    saveUserName(this@MainActivity, name) //
-
-                                    userToken = token
-                                    userName = name
-                                    currentScreen = "home"
-                                },
-
-                                onGoToRegister = { currentScreen = "register" }
-                            )
-                        }
-                        "register" -> {
-                            RegisterScreen(
-                                onRegisterSuccess = {
-                                    currentScreen = "login"
-                                },
-
-                                onBackToLogin = {
-                                    currentScreen = "login"
+                        "login" -> LoginScreen(
+                            onLoginSuccess = { token, name ->
+                                sessionManager.saveAuthToken(token)
+                                sessionManager.saveUserName(name)
+                                RetrofitClient.saveToken(token)
+                                userName = name
+                                currentScreen = "home"
+                            },
+                            onGoToRegister = { currentScreen = "register" }
+                        )
+                        "register" -> RegisterScreen(
+                            onRegisterSuccess = { currentScreen = "login" },
+                            onBackToLogin = { currentScreen = "login" }
+                        )
+                        "home" -> HomeScreen(
+                            nombreUsuario = userName,
+                            userToken = loadedToken ?: "",
+                            userPhotoUri = userPhotoUri,
+                            onLogout = {
+                                sessionManager.clearAuthToken()
+                                RetrofitClient.clearSession()
+                                currentScreen = "login"
+                            },
+                            onNavigateToProfile = { currentScreen = "profile" },
+                            onBookClick = { libro ->
+                                selectedBook = libro
+                                currentScreen = "detail"
+                            },
+                            onNavigateToLibrary = { currentScreen = "library" }
+                        )
+                        "detail" -> BookDetailScreen(
+                            libro = selectedBook,
+                            onBack = { currentScreen = "home" },
+                            onAddToCart = {
+                                selectedBook?.let {
+                                    cartItems.add(it)
+                                    Toast.makeText(context, "Agregado al carrito", Toast.LENGTH_SHORT).show()
+                                    currentScreen = "cart"
                                 }
-                            )
-                        }
+                            }
+                        )
+                        "cart" -> CartScreen(
+                            cartItems = cartItems,
+                            onBack = { currentScreen = "detail" },
+                            onCheckout = { currentScreen = "checkout" }
+                        )
+                        "checkout" -> CheckoutScreen(
+                            onBack = { currentScreen = "cart" },
+                            onConfirm = {
 
-                        "home" -> {
-                            HomeScreen(
-                                nombreUsuario = userName,
-                                userToken = userToken,
-                                userPhotoUri = userPhotoUri,
-                                onLogout = {
-
-
-                                    RetrofitClient.clearSession()
-                                    clearUserName(this@MainActivity)
-
-                                    userToken = ""
-                                    currentScreen = "login"
-                                },
-
-                                onNavigateToProfile = { currentScreen = "profile" }
-                            )
-                        }
-                        "profile" -> {
-                            ProfileScreen(
-                                nombreUsuario = userName,
-                                currentImageUri = userPhotoUri,
-                                onBack = { currentScreen = "home" },
-                                onImageSaved = { newUri ->
-                                    userPhotoUri = newUri
-                                    savePhotoUri(this@MainActivity, newUri)
-                                }
-                            )
-                        }
+                                libraryBooks.addAll(cartItems)
+                                cartItems.clear()
+                                currentScreen = "success"
+                            }
+                        )
+                        "success" -> OrderSuccessScreen(
+                            onGoLibrary = { currentScreen = "library" }
+                        )
+                        "library" -> MyLibraryScreen(
+                            librosComprados = libraryBooks,
+                            onBack = { currentScreen = "home" },
+                            onReadBook = { currentScreen = "reader" }
+                        )
+                        "reader" -> ReaderScreen(
+                            onClose = { currentScreen = "library" }
+                        )
+                        "profile" -> ProfileScreen(
+                            nombreUsuario = userName,
+                            currentImageUri = userPhotoUri,
+                            onBack = { currentScreen = "home" },
+                            onImageSaved = { uri ->
+                                userPhotoUri = uri
+                                sessionManager.savePhotoUri(uri)
+                            }
+                        )
                     }
                 }
             }
         }
-    }
-
-
-    private fun saveUserName(context: Context, name: String) {
-        val sharedPref = context.getSharedPreferences("BooksyPrefs", Context.MODE_PRIVATE)
-        with(sharedPref.edit()) {
-            putString("auth_name", name)
-            apply()
-        }
-    }
-
-    private fun loadUserName(context: Context): String? {
-        val sharedPref = context.getSharedPreferences("BooksyPrefs", Context.MODE_PRIVATE)
-        return sharedPref.getString("auth_name", null)
-    }
-
-    private fun clearUserName(context: Context) {
-        val sharedPref = context.getSharedPreferences("BooksyPrefs", Context.MODE_PRIVATE)
-        with(sharedPref.edit()) {
-            remove("auth_name")
-            apply()
-        }
-    }
-
-
-    private fun savePhotoUri(context: Context, uri: Uri) {
-        val sharedPref = context.getSharedPreferences("BooksyPrefs", Context.MODE_PRIVATE)
-        with(sharedPref.edit()) {
-            putString("profile_photo", uri.toString())
-            apply()
-        }
-    }
-
-    private fun loadPhotoUri(context: Context): Uri? {
-        val sharedPref = context.getSharedPreferences("BooksyPrefs", Context.MODE_PRIVATE)
-        val uriString = sharedPref.getString("profile_photo", null)
-        return uriString?.let { Uri.parse(it) }
     }
 }

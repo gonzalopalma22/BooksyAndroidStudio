@@ -3,12 +3,14 @@ package com.example.booksy.ui
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -35,17 +37,17 @@ fun HomeScreen(
     onLogout: () -> Unit,
     onNavigateToProfile: () -> Unit,
     userToken: String,
-    userPhotoUri: Uri?
+    userPhotoUri: Uri?,
+    onBookClick: (Libro) -> Unit,
+    onNavigateToLibrary: () -> Unit
 ) {
 
     val apiService = RetrofitClient.instance
     val repository = remember { LibroRepository(apiService) }
     val viewModel: LibroViewModel = viewModel(factory = LibroViewModelFactory(repository))
 
-
     val listaLibros by viewModel.libros.collectAsState()
     val estaCargando by viewModel.isLoading.collectAsState()
-
 
     var searchText by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("Todas") }
@@ -77,6 +79,7 @@ fun HomeScreen(
                 .padding(horizontal = 16.dp)
         ) {
 
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -85,13 +88,13 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
 
+
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
                         onClick = onNavigateToProfile,
                         modifier = Modifier.size(54.dp)
                     ) {
                         if (userPhotoUri != null) {
-
                             AsyncImage(
                                 model = userPhotoUri,
                                 contentDescription = "Ir a Perfil",
@@ -102,7 +105,6 @@ fun HomeScreen(
                                 contentScale = ContentScale.Crop
                             )
                         } else {
-
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -122,9 +124,8 @@ fun HomeScreen(
                     Spacer(modifier = Modifier.width(12.dp))
 
                     Column {
-
                         Text(
-                            text = "Bienvenido a Booksy App",
+                            text = "Hola,",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.secondary
                         )
@@ -137,12 +138,22 @@ fun HomeScreen(
                 }
 
 
-                IconButton(onClick = onLogout) {
-                    Icon(
-                        imageVector = Icons.Default.ExitToApp,
-                        contentDescription = "Cerrar Sesión",
-                        tint = MaterialTheme.colorScheme.error
-                    )
+                Row {
+                    IconButton(onClick = onNavigateToLibrary) {
+                        Icon(
+                            imageVector = Icons.Default.Menu,
+                            contentDescription = "Mis Libros",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    IconButton(onClick = onLogout) {
+                        Icon(
+                            imageVector = Icons.Default.ExitToApp,
+                            contentDescription = "Cerrar Sesión",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
                 }
             }
 
@@ -185,7 +196,7 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // --- LISTA DE RESULTADOS ---
+
             if (estaCargando) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
@@ -212,7 +223,11 @@ fun HomeScreen(
                         }
                     } else {
                         items(listaLibros) { libro ->
-                            ItemLibro(libro)
+
+                            ItemLibro(
+                                libro = libro,
+                                onClick = { onBookClick(libro) }
+                            )
                         }
                     }
                 }
@@ -220,7 +235,6 @@ fun HomeScreen(
         }
     }
 }
-
 
 @Composable
 fun CategoryFilter(selectedCategory: String, onCategorySelected: (String) -> Unit) {
@@ -252,18 +266,18 @@ fun CategoryFilter(selectedCategory: String, onCategorySelected: (String) -> Uni
     }
 }
 
-
 @Composable
-fun ItemLibro(libro: Libro) {
+fun ItemLibro(libro: Libro, onClick: () -> Unit) {
     Card(
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         modifier = Modifier
             .fillMaxWidth()
             .height(110.dp)
+            .clickable { onClick() }
     ) {
         Row(modifier = Modifier.fillMaxSize()) {
-            // Imagen del libro
+
             AsyncImage(
                 model = libro.imagen,
                 contentDescription = libro.titulo,
@@ -273,7 +287,7 @@ fun ItemLibro(libro: Libro) {
                 contentScale = ContentScale.Crop
             )
 
-            // Datos del libro
+
             Column(
                 modifier = Modifier
                     .padding(12.dp)
@@ -287,7 +301,6 @@ fun ItemLibro(libro: Libro) {
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 2
                     )
-
                 }
 
                 Text(

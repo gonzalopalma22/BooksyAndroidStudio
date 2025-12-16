@@ -1,6 +1,5 @@
 package com.example.booksy.ui
 
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
@@ -21,33 +20,41 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.booksy.model.RegisterRequest
-import com.example.booksy.network.RetrofitClient
-import kotlinx.coroutines.launch
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.booksy.viewmodel.RegisterViewModel
 
 @Composable
 fun RegisterScreen(
     onRegisterSuccess: () -> Unit,
-    onBackToLogin: () -> Unit // ⬅️
+    onBackToLogin: () -> Unit,
+    viewModel: RegisterViewModel = viewModel() // Inyectamos el ViewModel
 ) {
+    val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val apiService = RetrofitClient.instance
 
+    // Estado local SOLO para ver/ocultar contraseña (visual)
+    var passwordVisible by remember { mutableStateOf(false) }
 
-    BackHandler {
-        onBackToLogin()
+    // Manejo de botón atrás físico
+    BackHandler { onBackToLogin() }
+
+    // Observar éxito
+    LaunchedEffect(uiState.isSuccess) {
+        if (uiState.isSuccess) {
+            Toast.makeText(context, "¡Registro exitoso!", Toast.LENGTH_LONG).show()
+            viewModel.resetState()
+            onRegisterSuccess()
+        }
     }
 
-    var nombre by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var telefono by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
-
-    var passwordVisible by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(false) }
+    // Observar errores
+    LaunchedEffect(uiState.errorMessage) {
+        uiState.errorMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -56,124 +63,90 @@ fun RegisterScreen(
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Start
-        ) {
+        // Botón Volver
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
             IconButton(onClick = { onBackToLogin() }) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Volver al Login",
-                    tint = MaterialTheme.colorScheme.primary
-                )
+                Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = MaterialTheme.colorScheme.primary)
             }
         }
 
         Text("Crear Cuenta", style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(24.dp))
 
+        // CAMPOS CONECTADOS AL VIEWMODEL
+        OutlinedTextField(
+            value = uiState.nombre,
+            onValueChange = { viewModel.onNombreChange(it) },
+            label = { Text("Nombre completo") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
 
         OutlinedTextField(
-            value = nombre, onValueChange = { nombre = it },
-            label = { Text("Nombre completo") }, modifier = Modifier.fillMaxWidth(), singleLine = true
+            value = uiState.email,
+            onValueChange = { viewModel.onEmailChange(it) },
+            label = { Text("Correo electrónico") },
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+            singleLine = true
         )
-        // ➡️ HINT 1: Nombre
-        Text("Requerido", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+        Text("ejemplo@dominio.com", style = MaterialTheme.typography.bodySmall, color = Color.Gray, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Start)
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
-            value = email, onValueChange = { email = it },
-            label = { Text("Correo electrónico") }, modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), singleLine = true
+            value = uiState.telefono,
+            onValueChange = { viewModel.onTelefonoChange(it) },
+            label = { Text("Teléfono") },
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+            singleLine = true
         )
-
-        Text("Formato válido (ejemplo@dominio.com)", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+        Text("Opcional", style = MaterialTheme.typography.bodySmall, color = Color.Gray, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Start)
         Spacer(modifier = Modifier.height(12.dp))
 
+        // Contraseña
         OutlinedTextField(
-            value = telefono, onValueChange = { telefono = it },
-            label = { Text("Teléfono") }, modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), singleLine = true
-        )
-
-        Text("Opcional (se recomienda formato internacional)", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-        Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedTextField(
-            value = password, onValueChange = { password = it },
-            label = { Text("Contraseña") }, modifier = Modifier.fillMaxWidth(),
+            value = uiState.password,
+            onValueChange = { viewModel.onPasswordChange(it) },
+            label = { Text("Contraseña") },
+            modifier = Modifier.fillMaxWidth(),
             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             trailingIcon = {
-                val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                    Icon(imageVector = image, contentDescription = null)
+                    Icon(if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff, contentDescription = null)
                 }
             },
             singleLine = true
         )
-
-        Text("Mínimo 6 caracteres", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+        Text("Mínimo 6 caracteres", style = MaterialTheme.typography.bodySmall, color = Color.Gray, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Start)
         Spacer(modifier = Modifier.height(12.dp))
 
+        // Confirmar Contraseña
         OutlinedTextField(
-            value = confirmPassword, onValueChange = { confirmPassword = it },
-            label = { Text("Confirmar Contraseña") }, modifier = Modifier.fillMaxWidth(),
-            visualTransformation = PasswordVisualTransformation(), singleLine = true,
-            isError = confirmPassword.isNotEmpty() && password != confirmPassword
+            value = uiState.confirmPassword,
+            onValueChange = { viewModel.onConfirmPasswordChange(it) },
+            label = { Text("Confirmar Contraseña") },
+            modifier = Modifier.fillMaxWidth(),
+            visualTransformation = PasswordVisualTransformation(),
+            singleLine = true,
+            isError = uiState.confirmPassword.isNotEmpty() && uiState.password != uiState.confirmPassword
         )
-        if (confirmPassword.isNotEmpty() && password != confirmPassword) {
+        if (uiState.confirmPassword.isNotEmpty() && uiState.password != uiState.confirmPassword) {
             Text("Las contraseñas no coinciden", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
         }
+
         Spacer(modifier = Modifier.height(32.dp))
 
-
+        // Botón Registrar
         Button(
-            onClick = {
-                if (nombre.isBlank() || email.isBlank() || password.isBlank()) {
-                    Toast.makeText(context, "Faltan campos obligatorios", Toast.LENGTH_SHORT).show()
-                } else if (password != confirmPassword) {
-                    Toast.makeText(context, "Las contraseñas no coinciden", Toast.LENGTH_SHORT).show()
-                } else {
-                    scope.launch {
-                        isLoading = true
-                        try {
-                            val request = RegisterRequest(nombre, email, password, telefono)
-                            val response = apiService.register(request)
-                            if (response.isSuccessful) {
-                                Toast.makeText(context, "¡Registro exitoso!", Toast.LENGTH_LONG).show()
-                                onRegisterSuccess()
-                            } else {
-
-                                val errorCode = response.code()
-
-                                val errorBody = response.errorBody()?.string() ?: "No body available."
-
-
-                                Log.e("REGISTRO_ERROR", "Código: $errorCode, Cuerpo: $errorBody")
-
-                                Toast.makeText(
-                                    context,
-                                    "Error $errorCode. Revisar Logcat (REGISTRO_ERROR).",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                            }
-                        } catch (e: Exception) {
-                            Toast.makeText(context, "Error de red: ${e.message}", Toast.LENGTH_SHORT).show()
-                        } finally {
-                            isLoading = false
-                        }
-                    }
-                }
-            },
+            onClick = { viewModel.register() },
             modifier = Modifier.fillMaxWidth(),
-            enabled = !isLoading
+            enabled = !uiState.isLoading
         ) {
-            if (isLoading) CircularProgressIndicator(color = Color.White) else Text("Registrarse")
+            if (uiState.isLoading) CircularProgressIndicator(color = Color.White) else Text("Registrarse")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("¿Ya tienes cuenta? ")
